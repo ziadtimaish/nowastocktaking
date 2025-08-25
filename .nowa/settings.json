@@ -1,0 +1,8 @@
+{
+    "version": "3.0.4",
+    "app": {
+        "name": "elite_stocktaking",
+        "package_name": "com.example.elite_stocktaking"
+    },
+    "main": {}
+}
