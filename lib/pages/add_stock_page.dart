@@ -3,6 +3,7 @@ import 'package:nowa_runtime/nowa_runtime.dart';
 import 'package:elite_stocktaking/models/stock_model.dart';
 import 'package:elite_stocktaking/integrations/supabase_service.dart';
 import 'package:elite_stocktaking/models/stock_transaction_model.dart';
+import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
 @NowaGenerated()
 class AddStockPage extends StatefulWidget {
@@ -273,6 +274,369 @@ class _AddStockPageState extends State<AddStockPage> {
     }
   }
 
+  Future<void> _addStock() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+      _successMessage = null;
+    });
+    try {
+      final enteredQuantity = int.tryParse(_quantityController.text.trim()) ?? 0;
+      final newCategory = _selectedCategory == 'Other' ? _categoryController.text.trim() : _selectedCategory;
+      final existingStock = await SupabaseService().getStockBySku(
+        _skuController.text.trim(),
+      );
+      if (existingStock != null) {
+        final existingName = existingStock.name!.toLowerCase().trim();
+        final newName = _nameController.text.toLowerCase().trim();
+        if (existingName == newName) {
+          final existingCategory = existingStock.category!.toLowerCase().trim();
+          final newCategoryLower = newCategory!.toLowerCase().trim();
+          if (existingCategory != newCategoryLower) {
+            setState(() {
+              _isLoading = false;
+            });
+            await _showCategoryConflictDialog(
+              existingStock,
+              newCategory,
+              enteredQuantity,
+            );
+            return;
+          } else {
+            await _updateExistingStock(
+              existingStock,
+              enteredQuantity,
+              existingStock.category,
+            );
+            return;
+          }
+        } else {
+          setState(() {
+            _errorMessage = 'SKU "${existingStock.sku}" already exists with different name "${existingStock.name}". SKUs must be unique.';
+            _isLoading = false;
+          });
+          return;
+        }
+      }
+      final stockId = _generateStockId();
+      final stockModel = StockModel(
+        stockId: stockId,
+        name: _nameController.text.trim(),
+        sku: _skuController.text.trim(),
+        description: _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
+        category: newCategory,
+        quantity: enteredQuantity,
+        location: _locationController.text.trim().isEmpty ? null : _locationController.text.trim(),
+      );
+      final createdStock = await SupabaseService().createStock(stockModel);
+      if (mounted) {
+        if (createdStock != null) {
+          final transaction = StockTransactionModel(
+            transactionId: _generateTransactionId(),
+            stockId: stockId,
+            sku: createdStock.sku,
+            name: createdStock.name,
+            quantityAdded: enteredQuantity,
+            totalQuantityAfter: enteredQuantity,
+            transactionType: 'add',
+            notes: 'Initial stock creation with $enteredQuantity items',
+          );
+          await SupabaseService().createStockTransaction(transaction);
+          setState(() {
+            _successMessage = 'New stock item created successfully!';
+          });
+          _formKey.currentState?.reset();
+          _nameController.clear();
+          _skuController.clear();
+          _descriptionController.clear();
+          _categoryController.clear();
+          _quantityController.clear();
+          _locationController.clear();
+          _selectedCategory = null;
+          Future.delayed(const Duration(seconds: 2), () {
+            if (mounted) {
+              setState(() {
+                _successMessage = null;
+              });
+            }
+          });
+        } else {
+          setState(() {
+            _errorMessage = 'Failed to create stock item. Please try again.';
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage =
+              e.toString().contains('duplicate') ? 'Stock ID already exists. Please try again.' : 'An error occurred. Please try again.';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _scanBarcode() async {
+    try {
+      final result = await SimpleBarcodeScanner.scanBarcode(
+        context,
+        barcodeAppBar: BarcodeAppBar(
+          appBarTitle: 'Scan Barcode',
+          centerTitle: true,
+          enableBackButton: true,
+          backButtonIcon: const Icon(Icons.arrow_back_ios),
+        ),
+        isShowFlashIcon: true,
+        delayMillis: 2000,
+        cameraFace: CameraFace.back,
+      );
+      if (mounted && result != '-1') {
+        await _handleScannedBarcode(result!);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.white),
+                const SizedBox(width: 12.0),
+                Expanded(
+                  child: Text('Error scanning barcode: ${e.toString()}'),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red.shade600,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleScannedBarcode(String barcode) async {
+    try {
+      final existingStock = await SupabaseService().getStockBySku(barcode);
+      if (existingStock != null) {
+        _showExistingProductDialog(existingStock, barcode);
+      } else {
+        final mockProduct = _findMockProduct(barcode);
+        if (mockProduct != null) {
+          _fillFormFromBarcode(mockProduct);
+        } else {
+          _fillFormFromScannedBarcode(barcode);
+        }
+      }
+    } catch (e) {
+      _fillFormFromScannedBarcode(barcode);
+    }
+  }
+
+  void _showExistingProductDialog(StockModel existingStock, String barcode) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8.0),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8.0),
+              ),
+              child: Icon(
+                Icons.inventory_2,
+                color: Colors.blue.shade600,
+                size: 24.0,
+              ),
+            ),
+            const SizedBox(width: 12.0),
+            const Expanded(child: Text('Product Found!')),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'This barcode matches an existing product in your inventory:',
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 16.0),
+            Container(
+              padding: const EdgeInsets.all(16.0),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(12.0),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    existingStock.name ?? 'Unknown Product',
+                    style: const TextStyle(
+                      fontSize: 16.0,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8.0),
+                  Text('SKU: ${existingStock.sku}'),
+                  Text('Category: ${existingStock.category ?? 'No Category'}'),
+                  Text('Current Quantity: ${existingStock.quantity ?? 0}'),
+                  if (existingStock.location != null) Text('Location: ${existingStock.location}'),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _fillFormFromExistingStock(existingStock);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue.shade600,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Add Quantity'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _fillFormFromExistingStock(StockModel existingStock) {
+    setState(() {
+      _skuController.text = existingStock.sku ?? '';
+      _nameController.text = existingStock.name ?? '';
+      _selectedCategory = existingStock.category;
+      _descriptionController.text = existingStock.description ?? '';
+      _locationController.text = existingStock.location ?? '';
+      _quantityController.text = '1';
+      _errorMessage = null;
+      _successMessage = null;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.info, color: Colors.white),
+            const SizedBox(width: 12.0),
+            const Expanded(
+              child: Text(
+                'Existing product loaded. Set quantity to add to current stock.',
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.blue.shade600,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  Map<String, String>? _findMockProduct(String barcode) {
+    final mockProducts = {
+      '1234567890123': {
+        'sku': 'ELEC001',
+        'name': 'Samsung Galaxy Smartphone',
+        'category': 'Electronics',
+        'description': 'Latest Android smartphone with advanced features',
+      },
+      '2345678901234': {
+        'sku': 'OFF001',
+        'name': 'Ballpoint Pen Set',
+        'category': 'Office Supplies',
+        'description': 'Pack of 10 blue ballpoint pens',
+      },
+      '3456789012345': {
+        'sku': 'FOOD001',
+        'name': 'Premium Coffee Beans',
+        'category': 'Food & Beverages',
+        'description': 'Arabica coffee beans, 1kg package',
+      },
+      '4567890123456': {
+        'sku': 'CLOTH001',
+        'name': 'Cotton T-Shirt',
+        'category': 'Clothing',
+        'description': 'Premium cotton t-shirt, various sizes',
+      },
+      '5678901234567': {
+        'sku': 'MED001',
+        'name': 'Digital Thermometer',
+        'category': 'Medical Supplies',
+        'description': 'Non-contact infrared thermometer',
+      },
+    };
+    return mockProducts[barcode];
+  }
+
+  void _fillFormFromScannedBarcode(String barcode) {
+    setState(() {
+      _skuController.text = barcode;
+      _errorMessage = null;
+      _successMessage = null;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.qr_code_scanner, color: Colors.white),
+            const SizedBox(width: 12.0),
+            Expanded(
+              child: Text(
+                'Barcode scanned: $barcode\nPlease fill remaining details manually.',
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.orange.shade600,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  void _fillFormFromBarcode(Map<String, String> productData) {
+    setState(() {
+      _skuController.text = productData['sku']!;
+      _nameController.text = productData['name']!;
+      _selectedCategory = productData['category'];
+      _descriptionController.text = productData['description']!;
+      _errorMessage = null;
+      _successMessage = null;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white),
+            const SizedBox(width: 12.0),
+            const Expanded(
+              child: Text('Product information filled from barcode scan!'),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.green.shade600,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -386,51 +750,126 @@ class _AddStockPageState extends State<AddStockPage> {
                   },
                 ),
                 const SizedBox(height: 16.0),
-                TextFormField(
-                  controller: _skuController,
-                  textInputAction: TextInputAction.next,
-                  textCapitalization: TextCapitalization.characters,
-                  decoration: InputDecoration(
-                    labelText: 'SKU *',
-                    hintText: 'Enter unique stock keeping unit code',
-                    helperStyle: TextStyle(
-                      color: Colors.orange.shade600,
-                      fontSize: 12.0,
-                    ),
-                    prefixIcon: Icon(
-                      Icons.qr_code,
-                      color: Colors.grey.shade600,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12.0),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12.0),
-                      borderSide: BorderSide(
-                        color: Colors.blue.shade600,
-                        width: 2.0,
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _skuController,
+                        textInputAction: TextInputAction.next,
+                        textCapitalization: TextCapitalization.characters,
+                        decoration: InputDecoration(
+                          labelText: 'SKU *',
+                          hintText: 'Enter unique stock keeping unit code',
+                          prefixIcon: Icon(
+                            Icons.qr_code,
+                            color: Colors.grey.shade600,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12.0),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12.0),
+                            borderSide: BorderSide(
+                              color: Colors.blue.shade600,
+                              width: 2.0,
+                            ),
+                          ),
+                          errorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12.0),
+                            borderSide: BorderSide(
+                              color: Colors.red.shade400,
+                              width: 1.0,
+                            ),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter the SKU';
+                          }
+                          if (value.trim().length < 3) {
+                            return 'SKU must be at least 3 characters';
+                          }
+                          return null;
+                        },
                       ),
                     ),
-                    errorBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12.0),
-                      borderSide: BorderSide(
-                        color: Colors.red.shade400,
-                        width: 1.0,
+                    const SizedBox(width: 12.0),
+                    Container(
+                      height: 56.0,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.orange.shade400,
+                            Colors.orange.shade600,
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(12.0),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.orange.shade200,
+                            blurRadius: 8.0,
+                            offset: const Offset(0.0, 2.0),
+                          ),
+                        ],
+                      ),
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _scanBarcode,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.0),
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.qr_code_scanner,
+                              color: Colors.white,
+                              size: 20.0,
+                            ),
+                            SizedBox(width: 8.0),
+                            Text(
+                              'Scan',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 14.0,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    filled: true,
-                    fillColor: Colors.white,
+                  ],
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0, left: 12.0),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.camera_alt,
+                        size: 16.0,
+                        color: Colors.orange.shade600,
+                      ),
+                      const SizedBox(width: 6.0),
+                      Text(
+                        'Scan barcode to auto-fill product information',
+                        style: TextStyle(
+                          fontSize: 12.0,
+                          color: Colors.orange.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter the SKU';
-                    }
-                    if (value.trim().length < 3) {
-                      return 'SKU must be at least 3 characters';
-                    }
-                    return null;
-                  },
                 ),
                 const SizedBox(height: 16.0),
                 Column(
@@ -543,10 +982,6 @@ class _AddStockPageState extends State<AddStockPage> {
                   decoration: InputDecoration(
                     labelText: 'Quantity *',
                     hintText: 'Enter initial stock quantity',
-                    helperStyle: TextStyle(
-                      color: Colors.green.shade600,
-                      fontSize: 12.0,
-                    ),
                     prefixIcon: Icon(
                       Icons.numbers,
                       color: Colors.grey.shade600,
@@ -771,116 +1206,5 @@ class _AddStockPageState extends State<AddStockPage> {
         ),
       ),
     );
-  }
-
-  Future<void> _addStock() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-      _successMessage = null;
-    });
-    try {
-      final enteredQuantity = int.tryParse(_quantityController.text.trim()) ?? 0;
-      final newCategory = _selectedCategory == 'Other' ? _categoryController.text.trim() : _selectedCategory;
-      final existingStock = await SupabaseService().getStockBySku(
-        _skuController.text.trim(),
-      );
-      if (existingStock != null) {
-        final existingName = existingStock.name!.toLowerCase().trim();
-        final newName = _nameController.text.toLowerCase().trim();
-        if (existingName == newName) {
-          final existingCategory = existingStock.category!.toLowerCase().trim();
-          final newCategoryLower = newCategory!.toLowerCase().trim();
-          if (existingCategory != newCategoryLower) {
-            setState(() {
-              _isLoading = false;
-            });
-            await _showCategoryConflictDialog(
-              existingStock,
-              newCategory,
-              enteredQuantity,
-            );
-            return;
-          } else {
-            await _updateExistingStock(
-              existingStock,
-              enteredQuantity,
-              existingStock.category,
-            );
-            return;
-          }
-        } else {
-          setState(() {
-            _errorMessage = 'SKU "${existingStock.sku}" already exists with different name "${existingStock.name}". SKUs must be unique.';
-            _isLoading = false;
-          });
-          return;
-        }
-      }
-      final stockId = _generateStockId();
-      final stockModel = StockModel(
-        stockId: stockId,
-        name: _nameController.text.trim(),
-        sku: _skuController.text.trim(),
-        description: _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
-        category: newCategory,
-        quantity: enteredQuantity,
-        location: _locationController.text.trim().isEmpty ? null : _locationController.text.trim(),
-      );
-      final createdStock = await SupabaseService().createStock(stockModel);
-      if (mounted) {
-        if (createdStock != null) {
-          final transaction = StockTransactionModel(
-            transactionId: _generateTransactionId(),
-            stockId: stockId,
-            sku: createdStock.sku,
-            name: createdStock.name,
-            quantityAdded: enteredQuantity,
-            totalQuantityAfter: enteredQuantity,
-            transactionType: 'add',
-            notes: 'Initial stock creation with $enteredQuantity items',
-          );
-          await SupabaseService().createStockTransaction(transaction);
-          setState(() {
-            _successMessage = 'New stock item created successfully!';
-          });
-          _formKey.currentState?.reset();
-          _nameController.clear();
-          _skuController.clear();
-          _descriptionController.clear();
-          _categoryController.clear();
-          _quantityController.clear();
-          _locationController.clear();
-          _selectedCategory = null;
-          Future.delayed(const Duration(seconds: 2), () {
-            if (mounted) {
-              setState(() {
-                _successMessage = null;
-              });
-            }
-          });
-        } else {
-          setState(() {
-            _errorMessage = 'Failed to create stock item. Please try again.';
-          });
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage =
-              e.toString().contains('duplicate') ? 'Stock ID already exists. Please try again.' : 'An error occurred. Please try again.';
-        });
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
   }
 }
