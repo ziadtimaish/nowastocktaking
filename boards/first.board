@@ -1,13 +1,33 @@
 {
     "canvases": [
         {
-            "x": 500.0,
-            "y": 200.0,
+            "x": 39.0,
+            "y": -189.0,
             "w": 393.0,
             "h": 808.0,
-            "widget": "const HomePage()",
+            "widget": "const SignInPage()",
             "deps": [
-                "lib/pages/home_page.dart"
+                "lib/pages/sign_in_page.dart"
+            ]
+        },
+        {
+            "x": 506.0,
+            "y": -189.0,
+            "w": 393.0,
+            "h": 808.0,
+            "widget": "const SignUpPage()",
+            "deps": [
+                "lib/pages/sign_up_page.dart"
+            ]
+        },
+        {
+            "x": 961.0,
+            "y": -189.0,
+            "w": 393.0,
+            "h": 808.0,
+            "widget": "const AddStockPage()",
+            "deps": [
+                "lib/pages/add_stock_page.dart"
             ]
         }
     ]

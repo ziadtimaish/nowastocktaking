@@ -4,5 +4,13 @@
         "name": "elite_stocktaking",
         "package_name": "com.example.elite_stocktaking"
     },
-    "main": {}
+    "main": [
+        {
+            "key": "supabase",
+            "statement": "await SupabaseService().initialize();",
+            "imports": [
+                "package:elite_stocktaking/integrations/supabase_service.dart"
+            ]
+        }
+    ]
 }
