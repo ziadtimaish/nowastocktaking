@@ -4,6 +4,9 @@ import 'package:nowa_runtime/nowa_runtime.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:elite_stocktaking/integrations/supabase_service.dart';
 import 'package:elite_stocktaking/pages/sign_in_page.dart';
+import 'package:elite_stocktaking/pages/edit_profile_page.dart';
+import 'package:elite_stocktaking/pages/security_page.dart';
+import 'package:elite_stocktaking/pages/help_and_support_page.dart';
 
 @NowaGenerated()
 class SettingsPage extends StatefulWidget {
@@ -286,14 +289,16 @@ class _SettingsPageState extends State<SettingsPage> {
                                 Icons.chevron_right,
                                 color: Colors.grey.shade400,
                               ),
-                              onTap: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Edit Profile feature coming soon!',
-                                    ),
+                              onTap: () async {
+                                final result = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => EditProfilePage(currentUser: _currentUser),
                                   ),
                                 );
+                                if (result == true) {
+                                  _loadUserProfile();
+                                }
                               },
                             ),
                             Divider(color: Colors.grey.shade200),
@@ -321,9 +326,10 @@ class _SettingsPageState extends State<SettingsPage> {
                                 color: Colors.grey.shade400,
                               ),
                               onTap: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Security settings coming soon!'),
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const SecurityPage(),
                                   ),
                                 );
                               },
@@ -351,9 +357,10 @@ class _SettingsPageState extends State<SettingsPage> {
                                 color: Colors.grey.shade400,
                               ),
                               onTap: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Help & Support coming soon!'),
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const HelpAndSupportPage(),
                                   ),
                                 );
                               },

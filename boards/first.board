@@ -21,13 +21,13 @@
             ]
         },
         {
-            "x": 961.0,
+            "x": 933.0,
             "y": -189.0,
             "w": 393.0,
             "h": 808.0,
-            "widget": "const AddStockPage()",
+            "widget": "const SettingsPage()",
             "deps": [
-                "lib/pages/add_stock_page.dart"
+                "lib/pages/settings_page.dart"
             ]
         }
     ]
