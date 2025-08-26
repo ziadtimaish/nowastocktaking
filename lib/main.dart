@@ -27,6 +27,7 @@ class MyApp extends StatelessWidget {
     return ChangeNotifierProvider<AppState>(
       create: (context) => AppState(),
       builder: (context, child) => MaterialApp(
+        debugShowCheckedModeBanner: false,
         theme: AppState.of(context).theme,
         initialRoute: 'HomePage',
         routes: {'HomePage': (context) => const SignInPage()},
