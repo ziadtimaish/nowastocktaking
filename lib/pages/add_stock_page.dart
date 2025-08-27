@@ -196,7 +196,8 @@ class _AddStockPageState extends State<AddStockPage> {
       ),
     );
     if (result != null && result != 'cancel') {
-      final categoryToUse = result == 'existing' ? existingStock.category : newCategory;
+      final categoryToUse =
+          result == 'existing' ? existingStock.category : newCategory;
       await _updateExistingStock(existingStock, quantityToAdd, categoryToUse);
     }
   }
@@ -235,7 +236,9 @@ class _AddStockPageState extends State<AddStockPage> {
           quantityAdded: quantityToAdd,
           totalQuantityAfter: newQuantity,
           transactionType: 'add',
-          notes: quantityToAdd > 0 ? 'Added $quantityToAdd items via stock addition' : 'Stock updated - no quantity change',
+          notes: quantityToAdd > 0
+              ? 'Added $quantityToAdd items via stock addition'
+              : 'Stock updated - no quantity change',
         );
         await SupabaseService().createStockTransaction(transaction);
         if (mounted) {
@@ -262,7 +265,8 @@ class _AddStockPageState extends State<AddStockPage> {
         }
       } else {
         setState(() {
-          _errorMessage = 'Failed to update existing stock item. Please try again.';
+          _errorMessage =
+              'Failed to update existing stock item. Please try again.';
         });
       }
     } catch (e) {
@@ -284,8 +288,11 @@ class _AddStockPageState extends State<AddStockPage> {
       _successMessage = null;
     });
     try {
-      final enteredQuantity = int.tryParse(_quantityController.text.trim()) ?? 0;
-      final newCategory = _selectedCategory == 'Other' ? _categoryController.text.trim() : _selectedCategory;
+      final enteredQuantity =
+          int.tryParse(_quantityController.text.trim()) ?? 0;
+      final newCategory = _selectedCategory == 'Other'
+          ? _categoryController.text.trim()
+          : _selectedCategory;
       final existingStock = await SupabaseService().getStockBySku(
         _skuController.text.trim(),
       );
@@ -315,7 +322,8 @@ class _AddStockPageState extends State<AddStockPage> {
           }
         } else {
           setState(() {
-            _errorMessage = 'SKU "${existingStock.sku}" already exists with different name "${existingStock.name}". SKUs must be unique.';
+            _errorMessage =
+                'SKU "${existingStock.sku}" already exists with different name "${existingStock.name}". SKUs must be unique.';
             _isLoading = false;
           });
           return;
@@ -326,10 +334,14 @@ class _AddStockPageState extends State<AddStockPage> {
         stockId: stockId,
         name: _nameController.text.trim(),
         sku: _skuController.text.trim(),
-        description: _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
+        description: _descriptionController.text.trim().isEmpty
+            ? null
+            : _descriptionController.text.trim(),
         category: newCategory,
         quantity: enteredQuantity,
-        location: _locationController.text.trim().isEmpty ? null : _locationController.text.trim(),
+        location: _locationController.text.trim().isEmpty
+            ? null
+            : _locationController.text.trim(),
       );
       final createdStock = await SupabaseService().createStock(stockModel);
       if (mounted) {
@@ -372,8 +384,9 @@ class _AddStockPageState extends State<AddStockPage> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage =
-              e.toString().contains('duplicate') ? 'Stock ID already exists. Please try again.' : 'An error occurred. Please try again.';
+          _errorMessage = e.toString().contains('duplicate')
+              ? 'Stock ID already exists. Please try again.'
+              : 'An error occurred. Please try again.';
         });
       }
     } finally {
@@ -431,12 +444,7 @@ class _AddStockPageState extends State<AddStockPage> {
       if (existingStock != null) {
         _showExistingProductDialog(existingStock, barcode);
       } else {
-        final mockProduct = _findMockProduct(barcode);
-        if (mockProduct != null) {
-          _fillFormFromBarcode(mockProduct);
-        } else {
-          _fillFormFromScannedBarcode(barcode);
-        }
+        _fillFormFromScannedBarcode(barcode);
       }
     } catch (e) {
       _fillFormFromScannedBarcode(barcode);
@@ -495,7 +503,8 @@ class _AddStockPageState extends State<AddStockPage> {
                   Text('SKU: ${existingStock.sku}'),
                   Text('Category: ${existingStock.category ?? 'No Category'}'),
                   Text('Current Quantity: ${existingStock.quantity ?? 0}'),
-                  if (existingStock.location != null) Text('Location: ${existingStock.location}'),
+                  if (existingStock.location != null)
+                    Text('Location: ${existingStock.location}'),
                 ],
               ),
             ),
@@ -552,42 +561,6 @@ class _AddStockPageState extends State<AddStockPage> {
     );
   }
 
-  Map<String, String>? _findMockProduct(String barcode) {
-    final mockProducts = {
-      '1234567890123': {
-        'sku': 'ELEC001',
-        'name': 'Samsung Galaxy Smartphone',
-        'category': 'Electronics',
-        'description': 'Latest Android smartphone with advanced features',
-      },
-      '2345678901234': {
-        'sku': 'OFF001',
-        'name': 'Ballpoint Pen Set',
-        'category': 'Office Supplies',
-        'description': 'Pack of 10 blue ballpoint pens',
-      },
-      '3456789012345': {
-        'sku': 'FOOD001',
-        'name': 'Premium Coffee Beans',
-        'category': 'Food & Beverages',
-        'description': 'Arabica coffee beans, 1kg package',
-      },
-      '4567890123456': {
-        'sku': 'CLOTH001',
-        'name': 'Cotton T-Shirt',
-        'category': 'Clothing',
-        'description': 'Premium cotton t-shirt, various sizes',
-      },
-      '5678901234567': {
-        'sku': 'MED001',
-        'name': 'Digital Thermometer',
-        'category': 'Medical Supplies',
-        'description': 'Non-contact infrared thermometer',
-      },
-    };
-    return mockProducts[barcode];
-  }
-
   void _fillFormFromScannedBarcode(String barcode) {
     setState(() {
       _skuController.text = barcode;
@@ -609,32 +582,6 @@ class _AddStockPageState extends State<AddStockPage> {
         ),
         backgroundColor: Colors.orange.shade600,
         duration: const Duration(seconds: 4),
-      ),
-    );
-  }
-
-  void _fillFormFromBarcode(Map<String, String> productData) {
-    setState(() {
-      _skuController.text = productData['sku']!;
-      _nameController.text = productData['name']!;
-      _selectedCategory = productData['category'];
-      _descriptionController.text = productData['description']!;
-      _errorMessage = null;
-      _successMessage = null;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.check_circle, color: Colors.white),
-            const SizedBox(width: 12.0),
-            const Expanded(
-              child: Text('Product information filled from barcode scan!'),
-            ),
-          ],
-        ),
-        backgroundColor: Colors.green.shade600,
-        duration: const Duration(seconds: 3),
       ),
     );
   }
@@ -964,10 +911,13 @@ class _AddStockPageState extends State<AddStockPage> {
                           fillColor: Colors.white,
                         ),
                         validator: (value) {
-                          if (_selectedCategory == 'Other' && (value == null || value.isEmpty)) {
+                          if (_selectedCategory == 'Other' &&
+                              (value == null || value.isEmpty)) {
                             return 'Please enter a custom category name';
                           }
-                          if (_selectedCategory == 'Other' && value != null && value.trim().length < 2) {
+                          if (_selectedCategory == 'Other' &&
+                              value != null &&
+                              value.trim().length < 2) {
                             return 'Category name must be at least 2 characters';
                           }
                           return null;
@@ -1126,7 +1076,8 @@ class _AddStockPageState extends State<AddStockPage> {
                       ],
                     ),
                   ),
-                if (_errorMessage != null || _successMessage != null) const SizedBox(height: 16.0),
+                if (_errorMessage != null || _successMessage != null)
+                  const SizedBox(height: 16.0),
                 SizedBox(
                   height: 56.0,
                   child: ElevatedButton(
