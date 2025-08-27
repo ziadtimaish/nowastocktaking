@@ -164,7 +164,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       ),
                       const SizedBox(height: 8.0),
                       Text(
-                        'Join Elite Stocktaking today',
+                        'Join Nowa Stocktaking today',
                         style: TextStyle(
                           fontSize: 16.0,
                           color: Colors.grey.shade600,

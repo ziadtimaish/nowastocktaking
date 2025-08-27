@@ -400,7 +400,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       const SizedBox(height: 24.0),
                       Center(
                         child: Text(
-                          'Elite Stocktaking v1.0.0',
+                          'Nowa Stocktaking v1.0.0',
                           style: TextStyle(
                             color: Colors.grey.shade500,
                             fontSize: 12.0,

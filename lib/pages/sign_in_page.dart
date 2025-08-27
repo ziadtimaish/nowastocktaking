@@ -112,7 +112,7 @@ class _SignInPageState extends State<SignInPage> {
                     ),
                     const SizedBox(height: 24.0),
                     Text(
-                      'Elite Stocktaking',
+                      'Nowa Stocktaking',
                       style: TextStyle(
                         fontSize: 32.0,
                         fontWeight: FontWeight.bold,

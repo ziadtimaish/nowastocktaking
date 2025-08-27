@@ -1,4 +1,4 @@
-# elite_stocktaking
+# nowa_stocktaking
 
 A new Flutter project.
 

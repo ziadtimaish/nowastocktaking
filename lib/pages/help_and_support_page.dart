@@ -110,7 +110,7 @@ class _HelpAndSupportPageState extends State<HelpAndSupportPage> {
                       const SizedBox(width: 16.0),
                       const Expanded(
                         child: Text(
-                          'Elite Stocktaking Support',
+                          'Nowa Stocktaking Support',
                           style: TextStyle(
                             fontSize: 20.0,
                             fontWeight: FontWeight.bold,
@@ -139,9 +139,9 @@ class _HelpAndSupportPageState extends State<HelpAndSupportPage> {
                   _buildContactItem(
                     Icons.email_outlined,
                     'Email Support',
-                    'support@elitestocktaking.jo',
+                    'support@nowastocktaking.jo',
                     Colors.blue,
-                    onTap: () => _launchEmail('support@elitestocktaking.jo'),
+                    onTap: () => _launchEmail('support@nowastocktaking.jo'),
                   ),
                   const SizedBox(height: 16.0),
                   _buildContactItem(
