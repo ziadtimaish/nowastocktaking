@@ -1,7 +1,7 @@
 {
     "canvases": [
         {
-            "x": 39.0,
+            "x": 20.0,
             "y": -189.0,
             "w": 393.0,
             "h": 808.0,
@@ -11,7 +11,7 @@
             ]
         },
         {
-            "x": 506.0,
+            "x": 487.0,
             "y": -189.0,
             "w": 393.0,
             "h": 808.0,
@@ -28,6 +28,26 @@
             "widget": "const SettingsPage()",
             "deps": [
                 "lib/pages/settings_page.dart"
+            ]
+        },
+        {
+            "x": -474.0,
+            "y": 190.0,
+            "w": 393.0,
+            "h": 808.0,
+            "widget": "const HomePage()",
+            "deps": [
+                "lib/pages/home_page.dart"
+            ]
+        },
+        {
+            "x": 20.0,
+            "y": 669.0,
+            "w": 393.0,
+            "h": 808.0,
+            "widget": "const SplashScreen()",
+            "deps": [
+                "lib/pages/splash_screen.dart"
             ]
         }
     ]

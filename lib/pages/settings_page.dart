@@ -3,7 +3,6 @@ import 'package:elite_stocktaking/models/user_model.dart';
 import 'package:nowa_runtime/nowa_runtime.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:elite_stocktaking/integrations/supabase_service.dart';
-import 'package:elite_stocktaking/pages/sign_in_page.dart';
 import 'package:elite_stocktaking/pages/edit_profile_page.dart';
 import 'package:elite_stocktaking/pages/security_page.dart';
 import 'package:elite_stocktaking/pages/help_and_support_page.dart';
@@ -71,27 +70,6 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  Future<void> _signOut() async {
-    try {
-      await SupabaseService().signOut();
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const SignInPage()),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Failed to sign out. Please try again.'),
-            backgroundColor: Colors.red.shade600,
-          ),
-        );
-      }
-    }
-  }
-
   void _showSignOutDialog() {
     showDialog(
       context: context,
@@ -117,6 +95,26 @@ class _SettingsPageState extends State<SettingsPage> {
         ],
       ),
     );
+  }
+
+  Future<void> _signOut() async {
+    try {
+      await SupabaseService().signOut();
+      if (mounted) {
+        Navigator.of(
+          context,
+        ).pushNamedAndRemoveUntil('/sign-in', (route) => false);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Failed to sign out. Please try again.'),
+            backgroundColor: Colors.red.shade600,
+          ),
+        );
+      }
+    }
   }
 
   @override

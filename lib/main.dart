@@ -1,10 +1,12 @@
-import 'package:elite_stocktaking/pages/sign_in_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:elite_stocktaking/integrations/supabase_service.dart';
 import 'package:nowa_runtime/nowa_runtime.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:elite_stocktaking/globals/app_state.dart';
+import 'package:elite_stocktaking/components/auth_wrapper.dart';
+import 'package:elite_stocktaking/pages/sign_in_page.dart';
+import 'package:elite_stocktaking/pages/home_page.dart';
 
 @NowaGenerated()
 late final SharedPreferences sharedPrefs;
@@ -29,8 +31,11 @@ class MyApp extends StatelessWidget {
       builder: (context, child) => MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: AppState.of(context).theme,
-        initialRoute: 'HomePage',
-        routes: {'HomePage': (context) => const SignInPage()},
+        home: const AuthWrapper(),
+        routes: {
+          '/sign-in': (context) => const SignInPage(),
+          '/home': (context) => const HomePage(),
+        },
       ),
     );
   }

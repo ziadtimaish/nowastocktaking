@@ -12,6 +12,18 @@ class SupabaseService {
     return _instance;
   }
 
+  bool get isLoggedIn {
+    return Supabase.instance.client.auth.currentUser != null;
+  }
+
+  User? get currentUser {
+    return Supabase.instance.client.auth.currentUser;
+  }
+
+  String? get currentAccessToken {
+    return Supabase.instance.client.auth.currentSession?.accessToken;
+  }
+
   static final SupabaseService _instance = SupabaseService._();
 
   Future initialize() async {
@@ -142,5 +154,32 @@ class SupabaseService {
           (json) => StockTransactionModel.fromJson(json),
         )
         .toList();
+  }
+
+  Future<bool> checkAuthState() async {
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session == null) {
+      return false;
+    }
+    final expiresAt = session.expiresAt;
+    final now = (DateTime.now().millisecondsSinceEpoch / 1000).floor();
+    if (expiresAt != null && (expiresAt - now) < 300) {
+      try {
+        await Supabase.instance.client.auth.refreshSession();
+        return Supabase.instance.client.auth.currentUser != null;
+      } catch (e) {
+        await signOut();
+        return false;
+      }
+    }
+    return true;
+  }
+
+  Future<void> signOutEverywhere() async {
+    try {
+      await Supabase.instance.client.auth.signOut(scope: SignOutScope.global);
+    } catch (e) {
+      await Supabase.instance.client.auth.signOut();
+    }
   }
 }

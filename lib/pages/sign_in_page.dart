@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:nowa_runtime/nowa_runtime.dart';
-import 'package:elite_stocktaking/integrations/supabase_service.dart';
-import 'package:elite_stocktaking/pages/home_page.dart';
 import 'package:elite_stocktaking/pages/sign_up_page.dart';
+import 'package:elite_stocktaking/integrations/supabase_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 @NowaGenerated()
 class SignInPage extends StatefulWidget {
@@ -32,47 +32,6 @@ class _SignInPageState extends State<SignInPage> {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
-  }
-
-  Future<void> _signIn() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      final response = await SupabaseService().signIn(
-        _emailController.text.trim(),
-        _passwordController.text,
-      );
-      if (mounted) {
-        if (response.user != null) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const HomePage()),
-          );
-        } else {
-          setState(() {
-            _errorMessage = 'Sign in failed. Please try again.';
-          });
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage =
-              e.toString().contains('Invalid login credentials') ? 'Invalid email or password' : 'An error occurred. Please try again.';
-        });
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
   }
 
   @override
@@ -289,5 +248,45 @@ class _SignInPageState extends State<SignInPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _signIn() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    try {
+      final AuthResponse response = await SupabaseService().signIn(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
+      if (mounted) {
+        if (response.user != null) {
+          Navigator.of(
+            context,
+          ).pushNamedAndRemoveUntil('/home', (route) => false);
+        } else {
+          setState(() {
+            _errorMessage = 'Sign in failed. Please try again.';
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage =
+              e.toString().contains('Invalid login credentials') ? 'Invalid email or password' : 'An error occurred. Please try again.';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 }
