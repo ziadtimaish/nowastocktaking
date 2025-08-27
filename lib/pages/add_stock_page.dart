@@ -275,7 +275,6 @@ class _AddStockPageState extends State<AddStockPage> {
   }
 
   Future<void> _addStock() async {
-    FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -432,7 +431,12 @@ class _AddStockPageState extends State<AddStockPage> {
       if (existingStock != null) {
         _showExistingProductDialog(existingStock, barcode);
       } else {
-        _fillFormFromScannedBarcode(barcode);
+        final mockProduct = _findMockProduct(barcode);
+        if (mockProduct != null) {
+          _fillFormFromBarcode(mockProduct);
+        } else {
+          _fillFormFromScannedBarcode(barcode);
+        }
       }
     } catch (e) {
       _fillFormFromScannedBarcode(barcode);
@@ -548,6 +552,42 @@ class _AddStockPageState extends State<AddStockPage> {
     );
   }
 
+  Map<String, String>? _findMockProduct(String barcode) {
+    final mockProducts = {
+      '1234567890123': {
+        'sku': 'ELEC001',
+        'name': 'Samsung Galaxy Smartphone',
+        'category': 'Electronics',
+        'description': 'Latest Android smartphone with advanced features',
+      },
+      '2345678901234': {
+        'sku': 'OFF001',
+        'name': 'Ballpoint Pen Set',
+        'category': 'Office Supplies',
+        'description': 'Pack of 10 blue ballpoint pens',
+      },
+      '3456789012345': {
+        'sku': 'FOOD001',
+        'name': 'Premium Coffee Beans',
+        'category': 'Food & Beverages',
+        'description': 'Arabica coffee beans, 1kg package',
+      },
+      '4567890123456': {
+        'sku': 'CLOTH001',
+        'name': 'Cotton T-Shirt',
+        'category': 'Clothing',
+        'description': 'Premium cotton t-shirt, various sizes',
+      },
+      '5678901234567': {
+        'sku': 'MED001',
+        'name': 'Digital Thermometer',
+        'category': 'Medical Supplies',
+        'description': 'Non-contact infrared thermometer',
+      },
+    };
+    return mockProducts[barcode];
+  }
+
   void _fillFormFromScannedBarcode(String barcode) {
     setState(() {
       _skuController.text = barcode;
@@ -573,6 +613,32 @@ class _AddStockPageState extends State<AddStockPage> {
     );
   }
 
+  void _fillFormFromBarcode(Map<String, String> productData) {
+    setState(() {
+      _skuController.text = productData['sku']!;
+      _nameController.text = productData['name']!;
+      _selectedCategory = productData['category'];
+      _descriptionController.text = productData['description']!;
+      _errorMessage = null;
+      _successMessage = null;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white),
+            const SizedBox(width: 12.0),
+            const Expanded(
+              child: Text('Product information filled from barcode scan!'),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.green.shade600,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -588,243 +654,116 @@ class _AddStockPageState extends State<AddStockPage> {
         automaticallyImplyLeading: false,
       ),
       body: SafeArea(
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () => FocusScope.of(context).unfocus(),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(20.0),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(16.0),
-                      border: Border.all(color: Colors.blue.shade200),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12.0),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.shade600,
-                            borderRadius: BorderRadius.circular(12.0),
-                          ),
-                          child: const Icon(
-                            Icons.add_box,
-                            color: Colors.white,
-                            size: 24.0,
-                          ),
-                        ),
-                        const SizedBox(width: 16.0),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Add Stock Item',
-                                style: TextStyle(
-                                  fontSize: 18.0,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.blue.shade800,
-                                ),
-                              ),
-                              const SizedBox(height: 4.0),
-                              Text(
-                                'All fields marked with * are required',
-                                style: TextStyle(
-                                  fontSize: 14.0,
-                                  color: Colors.blue.shade600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(20.0),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(16.0),
+                    border: Border.all(color: Colors.blue.shade200),
                   ),
-                  const SizedBox(height: 32.0),
-                  TextFormField(
-                    controller: _nameController,
-                    textInputAction: TextInputAction.next,
-                    decoration: InputDecoration(
-                      labelText: 'Stock Name *',
-                      hintText: 'Enter the stock item name',
-                      prefixIcon: Icon(
-                        Icons.inventory_2,
-                        color: Colors.grey.shade600,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12.0),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12.0),
-                        borderSide: BorderSide(
-                          color: Colors.blue.shade600,
-                          width: 2.0,
-                        ),
-                      ),
-                      errorBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12.0),
-                        borderSide: BorderSide(
-                          color: Colors.red.shade400,
-                          width: 1.0,
-                        ),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter the stock name';
-                      }
-                      if (value.trim().length < 2) {
-                        return 'Stock name must be at least 2 characters';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16.0),
-                  Row(
+                  child: Row(
                     children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _skuController,
-                          textInputAction: TextInputAction.next,
-                          textCapitalization: TextCapitalization.characters,
-                          decoration: InputDecoration(
-                            labelText: 'SKU *',
-                            hintText: 'Enter unique stock keeping unit code',
-                            prefixIcon: Icon(
-                              Icons.qr_code,
-                              color: Colors.grey.shade600,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12.0),
-                              borderSide: BorderSide(
-                                color: Colors.grey.shade300,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12.0),
-                              borderSide: BorderSide(
-                                color: Colors.blue.shade600,
-                                width: 2.0,
-                              ),
-                            ),
-                            errorBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12.0),
-                              borderSide: BorderSide(
-                                color: Colors.red.shade400,
-                                width: 1.0,
-                              ),
-                            ),
-                            filled: true,
-                            fillColor: Colors.white,
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter the SKU';
-                            }
-                            if (value.trim().length < 3) {
-                              return 'SKU must be at least 3 characters';
-                            }
-                            return null;
-                          },
+                      Container(
+                        padding: const EdgeInsets.all(12.0),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade600,
+                          borderRadius: BorderRadius.circular(12.0),
+                        ),
+                        child: const Icon(
+                          Icons.add_box,
+                          color: Colors.white,
+                          size: 24.0,
                         ),
                       ),
-                      const SizedBox(width: 12.0),
-                      Container(
-                        height: 56.0,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.orange.shade400,
-                              Colors.orange.shade600,
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(12.0),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.orange.shade200,
-                              blurRadius: 8.0,
-                              offset: const Offset(0.0, 2.0),
+                      const SizedBox(width: 16.0),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Add Stock Item',
+                              style: TextStyle(
+                                fontSize: 18.0,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue.shade800,
+                              ),
+                            ),
+                            const SizedBox(height: 4.0),
+                            Text(
+                              'All fields marked with * are required',
+                              style: TextStyle(
+                                fontSize: 14.0,
+                                color: Colors.blue.shade600,
+                              ),
                             ),
                           ],
-                        ),
-                        child: ElevatedButton(
-                          onPressed: _isLoading ? null : _scanBarcode,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            shadowColor: Colors.transparent,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16.0,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12.0),
-                            ),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.qr_code_scanner,
-                                color: Colors.white,
-                                size: 20.0,
-                              ),
-                              SizedBox(width: 8.0),
-                              Text(
-                                'Scan',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14.0,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
                         ),
                       ),
                     ],
                   ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0, left: 12.0),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.camera_alt,
-                          size: 16.0,
-                          color: Colors.orange.shade600,
-                        ),
-                        const SizedBox(width: 6.0),
-                        Text(
-                          'Scan barcode to auto-fill product information',
-                          style: TextStyle(
-                            fontSize: 12.0,
-                            color: Colors.orange.shade600,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
+                ),
+                const SizedBox(height: 32.0),
+                TextFormField(
+                  controller: _nameController,
+                  textInputAction: TextInputAction.next,
+                  decoration: InputDecoration(
+                    labelText: 'Stock Name *',
+                    hintText: 'Enter the stock item name',
+                    prefixIcon: Icon(
+                      Icons.inventory_2,
+                      color: Colors.grey.shade600,
                     ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12.0),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12.0),
+                      borderSide: BorderSide(
+                        color: Colors.blue.shade600,
+                        width: 2.0,
+                      ),
+                    ),
+                    errorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12.0),
+                      borderSide: BorderSide(
+                        color: Colors.red.shade400,
+                        width: 1.0,
+                      ),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
                   ),
-                  const SizedBox(height: 16.0),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      DropdownButtonFormField<String>(
-                        initialValue: _selectedCategory,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter the stock name';
+                    }
+                    if (value.trim().length < 2) {
+                      return 'Stock name must be at least 2 characters';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16.0),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _skuController,
+                        textInputAction: TextInputAction.next,
+                        textCapitalization: TextCapitalization.characters,
                         decoration: InputDecoration(
-                          labelText: 'Category *',
-                          hintText: 'Select a category',
+                          labelText: 'SKU *',
+                          hintText: 'Enter unique stock keeping unit code',
                           prefixIcon: Icon(
-                            Icons.category,
+                            Icons.qr_code,
                             color: Colors.grey.shade600,
                           ),
                           border: OutlineInputBorder(
@@ -848,308 +787,422 @@ class _AddStockPageState extends State<AddStockPage> {
                           filled: true,
                           fillColor: Colors.white,
                         ),
-                        items: _categories
-                            .map(
-                              (category) => DropdownMenuItem<String>(
-                                value: category,
-                                child: Text(category),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedCategory = value;
-                            if (value != 'Other') {
-                              _categoryController.clear();
-                            }
-                          });
-                        },
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Please select a category';
+                            return 'Please enter the SKU';
+                          }
+                          if (value.trim().length < 3) {
+                            return 'SKU must be at least 3 characters';
                           }
                           return null;
                         },
                       ),
-                      if (_selectedCategory == 'Other') ...[
-                        const SizedBox(height: 16.0),
-                        TextFormField(
-                          controller: _categoryController,
-                          textInputAction: TextInputAction.next,
-                          decoration: InputDecoration(
-                            labelText: 'Custom Category *',
-                            hintText: 'Enter custom category name',
-                            prefixIcon: Icon(
-                              Icons.edit,
-                              color: Colors.grey.shade600,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12.0),
-                              borderSide: BorderSide(
-                                color: Colors.grey.shade300,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12.0),
-                              borderSide: BorderSide(
-                                color: Colors.blue.shade600,
-                                width: 2.0,
-                              ),
-                            ),
-                            errorBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12.0),
-                              borderSide: BorderSide(
-                                color: Colors.red.shade400,
-                                width: 1.0,
-                              ),
-                            ),
-                            filled: true,
-                            fillColor: Colors.white,
-                          ),
-                          validator: (value) {
-                            if (_selectedCategory == 'Other' && (value == null || value.isEmpty)) {
-                              return 'Please enter a custom category name';
-                            }
-                            if (_selectedCategory == 'Other' && value != null && value.trim().length < 2) {
-                              return 'Category name must be at least 2 characters';
-                            }
-                            return null;
-                          },
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 16.0),
-                  TextFormField(
-                    controller: _quantityController,
-                    keyboardType: TextInputType.number,
-                    textInputAction: TextInputAction.next,
-                    decoration: InputDecoration(
-                      labelText: 'Quantity *',
-                      hintText: 'Enter initial stock quantity',
-                      prefixIcon: Icon(
-                        Icons.numbers,
-                        color: Colors.grey.shade600,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12.0),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12.0),
-                        borderSide: BorderSide(
-                          color: Colors.blue.shade600,
-                          width: 2.0,
-                        ),
-                      ),
-                      errorBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12.0),
-                        borderSide: BorderSide(
-                          color: Colors.red.shade400,
-                          width: 1.0,
-                        ),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter the quantity';
-                      }
-                      final quantity = int.tryParse(value);
-                      if (quantity == null) {
-                        return 'Please enter a valid number';
-                      }
-                      if (quantity < 0) {
-                        return 'Quantity cannot be negative';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16.0),
-                  TextFormField(
-                    controller: _locationController,
-                    textInputAction: TextInputAction.next,
-                    decoration: InputDecoration(
-                      labelText: 'Location (Optional)',
-                      hintText: 'Enter storage location',
-                      prefixIcon: Icon(
-                        Icons.location_on,
-                        color: Colors.grey.shade600,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12.0),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12.0),
-                        borderSide: BorderSide(
-                          color: Colors.blue.shade600,
-                          width: 2.0,
-                        ),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 16.0),
-                  TextFormField(
-                    controller: _descriptionController,
-                    textInputAction: TextInputAction.done,
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      labelText: 'Description (Optional)',
-                      hintText: 'Enter item description or notes',
-                      prefixIcon: Icon(
-                        Icons.description,
-                        color: Colors.grey.shade600,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12.0),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12.0),
-                        borderSide: BorderSide(
-                          color: Colors.blue.shade600,
-                          width: 2.0,
-                        ),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
-                    ),
-                    onFieldSubmitted: (_) => _addStock(),
-                  ),
-                  const SizedBox(height: 24.0),
-                  if (_successMessage != null)
+                    const SizedBox(width: 12.0),
                     Container(
-                      padding: const EdgeInsets.all(12.0),
+                      height: 56.0,
                       decoration: BoxDecoration(
-                        color: Colors.green.shade50,
-                        borderRadius: BorderRadius.circular(8.0),
-                        border: Border.all(color: Colors.green.shade200),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.check_circle,
-                            color: Colors.green.shade600,
-                          ),
-                          const SizedBox(width: 12.0),
-                          Expanded(
-                            child: Text(
-                              _successMessage!,
-                              style: TextStyle(
-                                color: Colors.green.shade700,
-                                fontSize: 14.0,
-                              ),
-                            ),
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.orange.shade400,
+                            Colors.orange.shade600,
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(12.0),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.orange.shade200,
+                            blurRadius: 8.0,
+                            offset: const Offset(0.0, 2.0),
                           ),
                         ],
                       ),
-                    ),
-                  if (_errorMessage != null)
-                    Container(
-                      padding: const EdgeInsets.all(12.0),
-                      decoration: BoxDecoration(
-                        color: Colors.red.shade50,
-                        borderRadius: BorderRadius.circular(8.0),
-                        border: Border.all(color: Colors.red.shade200),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.error, color: Colors.red.shade600),
-                          const SizedBox(width: 12.0),
-                          Expanded(
-                            child: Text(
-                              _errorMessage!,
-                              style: TextStyle(
-                                color: Colors.red.shade700,
-                                fontSize: 14.0,
-                              ),
-                            ),
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _scanBarcode,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.0),
                           ),
-                        ],
-                      ),
-                    ),
-                  if (_errorMessage != null || _successMessage != null) const SizedBox(height: 16.0),
-                  SizedBox(
-                    height: 56.0,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _addStock,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue.shade600,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12.0),
                         ),
-                        elevation: 2.0,
-                      ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 20.0,
-                              height: 20.0,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.0,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Colors.white,
-                                ),
-                              ),
-                            )
-                          : const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.add, size: 20.0),
-                                SizedBox(width: 8.0),
-                                Text(
-                                  'Add Stock Item',
-                                  style: TextStyle(
-                                    fontSize: 16.0,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.qr_code_scanner,
+                              color: Colors.white,
+                              size: 20.0,
                             ),
-                    ),
-                  ),
-                  const SizedBox(height: 16.0),
-                  SizedBox(
-                    height: 48.0,
-                    child: OutlinedButton(
-                      onPressed: _isLoading
-                          ? null
-                          : () {
-                              _formKey.currentState?.reset();
-                              _nameController.clear();
-                              _skuController.clear();
-                              _descriptionController.clear();
-                              _categoryController.clear();
-                              _quantityController.clear();
-                              _locationController.clear();
-                              setState(() {
-                                _selectedCategory = null;
-                                _errorMessage = null;
-                                _successMessage = null;
-                              });
-                            },
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: Colors.grey.shade400),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12.0),
+                            SizedBox(width: 8.0),
+                            Text(
+                              'Scan',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 14.0,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      child: Text(
-                        'Clear Form',
+                    ),
+                  ],
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0, left: 12.0),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.camera_alt,
+                        size: 16.0,
+                        color: Colors.orange.shade600,
+                      ),
+                      const SizedBox(width: 6.0),
+                      Text(
+                        'Scan barcode to auto-fill product information',
                         style: TextStyle(
-                          color: Colors.grey.shade700,
-                          fontSize: 14.0,
+                          fontSize: 12.0,
+                          color: Colors.orange.shade600,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16.0),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    DropdownButtonFormField<String>(
+                      initialValue: _selectedCategory,
+                      decoration: InputDecoration(
+                        labelText: 'Category *',
+                        hintText: 'Select a category',
+                        prefixIcon: Icon(
+                          Icons.category,
+                          color: Colors.grey.shade600,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12.0),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12.0),
+                          borderSide: BorderSide(
+                            color: Colors.blue.shade600,
+                            width: 2.0,
+                          ),
+                        ),
+                        errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12.0),
+                          borderSide: BorderSide(
+                            color: Colors.red.shade400,
+                            width: 1.0,
+                          ),
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
+                      items: _categories
+                          .map(
+                            (category) => DropdownMenuItem<String>(
+                              value: category,
+                              child: Text(category),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedCategory = value;
+                          if (value != 'Other') {
+                            _categoryController.clear();
+                          }
+                        });
+                      },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please select a category';
+                        }
+                        return null;
+                      },
+                    ),
+                    if (_selectedCategory == 'Other') ...[
+                      const SizedBox(height: 16.0),
+                      TextFormField(
+                        controller: _categoryController,
+                        textInputAction: TextInputAction.next,
+                        decoration: InputDecoration(
+                          labelText: 'Custom Category *',
+                          hintText: 'Enter custom category name',
+                          prefixIcon: Icon(
+                            Icons.edit,
+                            color: Colors.grey.shade600,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12.0),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12.0),
+                            borderSide: BorderSide(
+                              color: Colors.blue.shade600,
+                              width: 2.0,
+                            ),
+                          ),
+                          errorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12.0),
+                            borderSide: BorderSide(
+                              color: Colors.red.shade400,
+                              width: 1.0,
+                            ),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                        ),
+                        validator: (value) {
+                          if (_selectedCategory == 'Other' && (value == null || value.isEmpty)) {
+                            return 'Please enter a custom category name';
+                          }
+                          if (_selectedCategory == 'Other' && value != null && value.trim().length < 2) {
+                            return 'Category name must be at least 2 characters';
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 16.0),
+                TextFormField(
+                  controller: _quantityController,
+                  keyboardType: TextInputType.number,
+                  textInputAction: TextInputAction.next,
+                  decoration: InputDecoration(
+                    labelText: 'Quantity *',
+                    hintText: 'Enter initial stock quantity',
+                    prefixIcon: Icon(
+                      Icons.numbers,
+                      color: Colors.grey.shade600,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12.0),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12.0),
+                      borderSide: BorderSide(
+                        color: Colors.blue.shade600,
+                        width: 2.0,
+                      ),
+                    ),
+                    errorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12.0),
+                      borderSide: BorderSide(
+                        color: Colors.red.shade400,
+                        width: 1.0,
+                      ),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter the quantity';
+                    }
+                    final quantity = int.tryParse(value);
+                    if (quantity == null) {
+                      return 'Please enter a valid number';
+                    }
+                    if (quantity < 0) {
+                      return 'Quantity cannot be negative';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16.0),
+                TextFormField(
+                  controller: _locationController,
+                  textInputAction: TextInputAction.next,
+                  decoration: InputDecoration(
+                    labelText: 'Location (Optional)',
+                    hintText: 'Enter storage location',
+                    prefixIcon: Icon(
+                      Icons.location_on,
+                      color: Colors.grey.shade600,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12.0),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12.0),
+                      borderSide: BorderSide(
+                        color: Colors.blue.shade600,
+                        width: 2.0,
+                      ),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 16.0),
+                TextFormField(
+                  controller: _descriptionController,
+                  textInputAction: TextInputAction.done,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    labelText: 'Description (Optional)',
+                    hintText: 'Enter item description or notes',
+                    prefixIcon: Icon(
+                      Icons.description,
+                      color: Colors.grey.shade600,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12.0),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12.0),
+                      borderSide: BorderSide(
+                        color: Colors.blue.shade600,
+                        width: 2.0,
+                      ),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                  onFieldSubmitted: (_) => _addStock(),
+                ),
+                const SizedBox(height: 24.0),
+                if (_successMessage != null)
+                  Container(
+                    padding: const EdgeInsets.all(12.0),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(8.0),
+                      border: Border.all(color: Colors.green.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.check_circle, color: Colors.green.shade600),
+                        const SizedBox(width: 12.0),
+                        Expanded(
+                          child: Text(
+                            _successMessage!,
+                            style: TextStyle(
+                              color: Colors.green.shade700,
+                              fontSize: 14.0,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                if (_errorMessage != null)
+                  Container(
+                    padding: const EdgeInsets.all(12.0),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(8.0),
+                      border: Border.all(color: Colors.red.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.error, color: Colors.red.shade600),
+                        const SizedBox(width: 12.0),
+                        Expanded(
+                          child: Text(
+                            _errorMessage!,
+                            style: TextStyle(
+                              color: Colors.red.shade700,
+                              fontSize: 14.0,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (_errorMessage != null || _successMessage != null) const SizedBox(height: 16.0),
+                SizedBox(
+                  height: 56.0,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _addStock,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue.shade600,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                      ),
+                      elevation: 2.0,
+                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 20.0,
+                            height: 20.0,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.0,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
+                          )
+                        : const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.add, size: 20.0),
+                              SizedBox(width: 8.0),
+                              Text(
+                                'Add Stock Item',
+                                style: TextStyle(
+                                  fontSize: 16.0,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 16.0),
+                SizedBox(
+                  height: 48.0,
+                  child: OutlinedButton(
+                    onPressed: _isLoading
+                        ? null
+                        : () {
+                            _formKey.currentState?.reset();
+                            _nameController.clear();
+                            _skuController.clear();
+                            _descriptionController.clear();
+                            _categoryController.clear();
+                            _quantityController.clear();
+                            _locationController.clear();
+                            setState(() {
+                              _selectedCategory = null;
+                              _errorMessage = null;
+                              _successMessage = null;
+                            });
+                          },
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: Colors.grey.shade400),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                      ),
+                    ),
+                    child: Text(
+                      'Clear Form',
+                      style: TextStyle(
+                        color: Colors.grey.shade700,
+                        fontSize: 14.0,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
