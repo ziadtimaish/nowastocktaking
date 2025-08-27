@@ -399,9 +399,11 @@ class _AddStockPageState extends State<AddStockPage> {
         delayMillis: 2000,
         cameraFace: CameraFace.back,
       );
-      if (mounted && result != '-1') {
-        await _handleScannedBarcode(result!);
+      if (!mounted) return;
+      if (result == null || result == '-1') {
+        return;
       }
+      await _handleScannedBarcode(result);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
