@@ -3,7 +3,7 @@ import 'package:nowa_runtime/nowa_runtime.dart';
 import 'package:elite_stocktaking/models/stock_model.dart';
 import 'package:elite_stocktaking/integrations/supabase_service.dart';
 import 'package:elite_stocktaking/models/stock_transaction_model.dart';
-import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
+import 'package:elite_stocktaking/components/barcode_scanner_service.dart';
 
 @NowaGenerated()
 class AddStockPage extends StatefulWidget {
@@ -386,135 +386,22 @@ class _AddStockPageState extends State<AddStockPage> {
   }
 
   Future<void> _scanBarcode() async {
-    try {
-      final result = await SimpleBarcodeScanner.scanBarcode(
+    final result = await BarcodeScannerService.scanBarcode(context);
+    if (!mounted || result == null) return;
+
+    final existingStock = await BarcodeScannerService.handleScannedBarcode(result);
+    if (!mounted) return;
+
+    if (existingStock != null) {
+      BarcodeScannerService.showExistingProductDialog(
         context,
-        barcodeAppBar: BarcodeAppBar(
-          appBarTitle: 'Scan Barcode',
-          centerTitle: true,
-          enableBackButton: true,
-          backButtonIcon: const Icon(Icons.arrow_back_ios),
-        ),
-        isShowFlashIcon: true,
-        delayMillis: 2000,
-        cameraFace: CameraFace.back,
+        existingStock,
+        result,
+        () => _fillFormFromExistingStock(existingStock),
       );
-      if (!mounted) return;
-      if (result == null || result == '-1') {
-        return;
-      }
-      await _handleScannedBarcode(result);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.error, color: Colors.white),
-                const SizedBox(width: 12.0),
-                Expanded(
-                  child: Text('Error scanning barcode: ${e.toString()}'),
-                ),
-              ],
-            ),
-            backgroundColor: Colors.red.shade600,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
+    } else {
+      _fillFormFromScannedBarcode(result);
     }
-  }
-
-  Future<void> _handleScannedBarcode(String barcode) async {
-    try {
-      final existingStock = await SupabaseService().getStockBySku(barcode);
-      if (existingStock != null) {
-        _showExistingProductDialog(existingStock, barcode);
-      } else {
-        _fillFormFromScannedBarcode(barcode);
-      }
-    } catch (e) {
-      _fillFormFromScannedBarcode(barcode);
-    }
-  }
-
-  void _showExistingProductDialog(StockModel existingStock, String barcode) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8.0),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(8.0),
-              ),
-              child: Icon(
-                Icons.inventory_2,
-                color: Colors.blue.shade600,
-                size: 24.0,
-              ),
-            ),
-            const SizedBox(width: 12.0),
-            const Expanded(child: Text('Product Found!')),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'This barcode matches an existing product in your inventory:',
-              style: TextStyle(color: Colors.grey.shade600),
-            ),
-            const SizedBox(height: 16.0),
-            Container(
-              padding: const EdgeInsets.all(16.0),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(12.0),
-                border: Border.all(color: Colors.grey.shade200),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    existingStock.name ?? 'Unknown Product',
-                    style: const TextStyle(
-                      fontSize: 16.0,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8.0),
-                  Text('SKU: ${existingStock.sku}'),
-                  Text('Category: ${existingStock.category ?? 'No Category'}'),
-                  Text('Current Quantity: ${existingStock.quantity ?? 0}'),
-                  if (existingStock.location != null) Text('Location: ${existingStock.location}'),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _fillFormFromExistingStock(existingStock);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue.shade600,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Add Quantity'),
-          ),
-        ],
-      ),
-    );
   }
 
   void _fillFormFromExistingStock(StockModel existingStock) {
@@ -528,23 +415,7 @@ class _AddStockPageState extends State<AddStockPage> {
       _errorMessage = null;
       _successMessage = null;
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.info, color: Colors.white),
-            const SizedBox(width: 12.0),
-            const Expanded(
-              child: Text(
-                'Existing product loaded. Set quantity to add to current stock.',
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: Colors.blue.shade600,
-        duration: const Duration(seconds: 4),
-      ),
-    );
+    BarcodeScannerService.showExistingProductSnackBar(context);
   }
 
   void _fillFormFromScannedBarcode(String barcode) {
@@ -553,23 +424,7 @@ class _AddStockPageState extends State<AddStockPage> {
       _errorMessage = null;
       _successMessage = null;
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.qr_code_scanner, color: Colors.white),
-            const SizedBox(width: 12.0),
-            Expanded(
-              child: Text(
-                'Barcode scanned: $barcode\nPlease fill remaining details manually.',
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: Colors.orange.shade600,
-        duration: const Duration(seconds: 4),
-      ),
-    );
+    BarcodeScannerService.showScannedBarcodeSnackBar(context, barcode);
   }
 
   @override

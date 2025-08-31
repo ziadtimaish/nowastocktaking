@@ -31,8 +31,9 @@ class MyApp extends StatelessWidget {
       builder: (context, child) => MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: AppState.of(context).theme,
-        home: const AuthWrapper(),
+        initialRoute: 'AuthWrapper',
         routes: {
+          'AuthWrapper': (context) => const AuthWrapper(),
           '/sign-in': (context) => const SignInPage(),
           '/home': (context) => const HomePage(),
         },
